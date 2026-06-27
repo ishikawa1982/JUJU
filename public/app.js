@@ -28,6 +28,7 @@ let activeWs = null;
 function resetAll() {
   try { activeWs?.close(); } catch { /* noop */ }
   activeWs = null;
+  currentSend = null; // 送信側ポーリングを停止
   $('sendPick').classList.remove('hidden');
   $('sendShare').classList.add('hidden');
   $('recvEntry').classList.remove('hidden');
@@ -115,10 +116,32 @@ async function startSend(file) {
     await uploadBlob(`/api/sessions/${s.sessionId}/blob`, blob, s.senderToken, (loaded, total) => {
       bar.value = 50 + Math.round((loaded / total) * 50); // 後半50%=送信
     });
+    bar.classList.add('hidden');
     $('sendStatus').textContent = '準備完了。受信を待っています…';
+    // WSが社内プロキシ等で塞がれていても完結するよう、状態をポーリングで確認する。
+    pollSenderStatus(s.sessionId);
   } catch (err) {
     console.error(err);
     $('sendStatus').textContent = `エラー: ${err.message || err}`;
+  }
+}
+
+// 送信側の状態ポーリング(WSフォールバック)。HTTPSのみで「授受中→完了」を検知。
+async function pollSenderStatus(sessionId) {
+  let wasClaimed = false;
+  while (currentSend && currentSend.sessionId === sessionId) {
+    let res;
+    try { res = await fetch(`/api/sessions/${sessionId}`); } catch { await sleep(2000); continue; }
+    if (res.status === 404) {
+      // セッション消滅: 受信完了で破棄 or 期限切れ
+      $('sendStatus').textContent = wasClaimed ? '✓ 授受完了' : '期限切れで削除されました';
+      return;
+    }
+    if (res.ok) {
+      const st = await res.json();
+      if (st.claimed && !wasClaimed) { wasClaimed = true; $('sendStatus').textContent = '受信者が参加。授受中…'; }
+    }
+    await sleep(2000);
   }
 }
 

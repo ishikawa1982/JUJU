@@ -6,9 +6,10 @@
   <meta name="theme-color" content="#f5f1e8" />
   <title>授受 — JUJU</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23f5f1e8'/%3E%3Ctext x='32' y='44' font-size='40' text-anchor='middle' fill='%23222'%3E授%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <link rel="stylesheet" href="./style.css" />
+  <!-- 外部CDNに依存しない(社内プロキシ対策): ライブラリはローカル同梱 -->
+  <script src="./vendor/qrcode.min.js" defer></script>
+  <script src="./vendor/html5-qrcode.min.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -54,6 +55,7 @@
         <div id="pinShow" class="pin-show">— — — — — —</div>
         <div class="qr-wrap"><canvas id="qrCanvas"></canvas></div>
         <p class="muted small">スマホで QR を読むか、上の6桁を入力してください。</p>
+        <p class="muted small">※相手が受け取るまで、この画面を開いたままにしてください。</p>
         <div id="sendStatus" class="status">準備中…</div>
         <progress id="sendProgress" max="100" value="0" class="hidden"></progress>
         <button id="sendCancel" class="ghost" type="button">キャンセル</button>
@@ -88,6 +90,6 @@
     <span>ファイルはサーバーに保存されません(暗号化して中継・数分で削除)</span>
   </footer>
 
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

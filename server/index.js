@@ -20,7 +20,9 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+        // 外部CDNに依存しない(社内プロキシ対策)。スクリプトは同一オリジンのみ。
+        scriptSrc: ["'self'"],
+        // html5-qrcode がインラインスタイルを注入するため style は 'unsafe-inline' を許可。
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'blob:'],
         connectSrc: ["'self'", 'ws:', 'wss:'],
@@ -33,6 +35,9 @@ app.use(
     crossOriginEmbedderPolicy: false,
   }),
 );
+
+// ヘルスチェック(PaaSの死活監視用)
+app.get('/healthz', (req, res) => res.type('text').send('ok'));
 
 app.use('/api', router);
 app.use(express.static(publicDir, { extensions: ['html'] }));

@@ -43,6 +43,40 @@ npm start
 
 > **HTTPS が必要**: スマホ実機でのカメラ(QRスキャン)と Web Crypto はセキュアコンテキストでのみ動作します。`localhost` は例外的に可。実機テストは Caddy / ngrok などで HTTPS 公開してください。本番は TLS 終端(Caddy / Render / Fly など)の背後に配置する前提です。
 
+## デプロイ(HTTPS 単一ホスト / 社内ネットワーク対応)
+
+社内ネットワーク(**Zscaler** などの SWG/プロキシ配下)の PC とやりとりする用途を想定しています。
+JUJU は **標準的な HTTPS(443)だけ**で完結し、WebRTC のような UDP/STUN/TURN を使いません。プロキシが
+理解・検査できる普通の HTTPS なので、企業環境でも通りやすいのが利点です。
+
+> なぜ WebRTC P2P ではないか: P2P はファイルをサーバーに一切置かない反面、UDP と STUN/TURN を使うため、
+> 外向き UDP を塞ぐ社内 FW や WebRTC を抑止する Zscaler 設定で**繋がらないことが多い**。本サービスは
+> 「数分だけサーバーを経由してよい」かわりに、企業網での確実性を優先しています。
+
+**Docker でデプロイ(推奨)**
+
+```bash
+docker build -t juju .
+docker run -p 3000:3000 -e JUJU_TTL_SEC=180 juju
+```
+
+**Render / Fly / Railway 等の PaaS**
+
+1. リポジトリを接続(同梱の `Dockerfile` を自動検出)。ヘルスチェックパスは `/healthz`。
+2. PaaS が **HTTPS(443)を自動終端**。発行 URL(例 `https://juju-xxxx.onrender.com`)を社内PC・スマホ
+   双方で開く。Zscaler はこれを標準 HTTPS として検査・通過します。
+3. 自前ドメイン + Caddy/Nginx でも可(`PORT` を合わせてリバースプロキシ)。
+
+**企業プロキシ環境での堅牢化(実装済み)**
+
+- **外部CDN非依存** — QR ライブラリ等は `public/vendor/` に同梱。CDN ブロックで壊れません。
+- **WebSocket が塞がれても動作** — 進捗/状態は WSS が通れば即時、塞がれていれば HTTPS ポーリングで
+  代替し、送受信は完結します。
+- 既知の制約: 非常に大きいファイルはプロキシのリクエストボディ上限に当たる場合があります
+  (`JUJU_MAX_MB` と併せて運用側で調整)。
+
+> ファイルの送受信が**社内ポリシー(DLP 等)で許可されている**ことは利用者側でご確認ください。
+
 ## 設定(環境変数)
 
 | 変数 | 既定 | 説明 |
@@ -58,17 +92,19 @@ npm start
 ## 構成
 
 ```
+Dockerfile      ポータブルなコンテナ定義(HTTPS単一ホスト用)
 server/
   config.js     設定(環境変数)
-  index.js      Express + WebSocket 起動・静的配信
+  index.js      Express + WebSocket 起動・静的配信・/healthz
   routes.js     API(セッション作成/prepare/upload/resolve/claim/download/delete)
   sessions.js   セッション管理(PIN↔id、TTL、単回ロック、WS通知)
   storage.js    暗号文の一時保存(ストリーム、DL時削除、TTLスイーパー)
 public/
   index.html    授/受 UI
   style.css     和テイストのデザイン(授=朱 / 受=藍)
-  app.js        画面遷移・暗号化・アップロード/ダウンロード・QR
+  app.js        画面遷移・暗号化・アップロード/ダウンロード・QR・状態ポーリング
   crypto.js     Web Crypto ヘルパ(チャンクAES-GCM、PBKDF2)
+  vendor/       同梱ライブラリ(qrcode / html5-qrcode)— 外部CDN非依存
 ```
 
 ## セキュリティ上の注意
@@ -79,5 +115,6 @@ public/
 
 ## 今後の拡張候補
 
-- WebRTC P2P 化(暗号文すらサーバーを通さない完全無サーバー転送)
+- ストリーミング・リレー(両者が同時接続している間は保存せず素通し)で「保存ゼロ」化
+- WebRTC P2P 化(完全無サーバー転送。ただし社内プロキシ環境では繋がりにくい点に注意)
 - 複数ファイル / フォルダの一括転送、PWA化(ホーム追加)

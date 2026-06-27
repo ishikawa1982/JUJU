@@ -1,0 +1,9 @@
+node_modules
+.tmp-storage
+.git
+*.log
+.DS_Store
+.env
+Dockerfile
+.dockerignore
+README.md
