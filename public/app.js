@@ -35,7 +35,11 @@ function resetAll() {
   $('recvProgress').classList.add('hidden');
   $('fileInput').value = '';
   $('fileInfo').textContent = '';
+  $('textInput').value = '';
   $('pinInput').value = '';
+  $('recvText').classList.add('hidden');
+  $('recvTextArea').value = '';
+  $('openLink').classList.add('hidden');
   stopScanner();
 }
 
@@ -51,7 +55,17 @@ function openWs(sessionId, role, token, onMsg) {
 // =====================================================================
 $('fileInput').addEventListener('change', () => {
   const f = $('fileInput').files[0];
-  if (f) { $('fileInfo').textContent = `${f.name} — ${fmtSize(f.size)}`; startSend(f); }
+  if (f) {
+    $('fileInfo').textContent = `${f.name} — ${fmtSize(f.size)}`;
+    startSend({ blob: f, name: f.name, type: f.type || 'application/octet-stream', kind: 'file' });
+  }
+});
+$('sendTextBtn').addEventListener('click', () => {
+  const text = $('textInput').value;
+  if (!text.trim()) { alert('テキストを入力してください'); return; }
+  const blob = new Blob([text], { type: 'text/plain' });
+  $('fileInfo').textContent = `テキスト — ${fmtSize(blob.size)}`;
+  startSend({ blob, name: 'juju-text.txt', type: 'text/plain', kind: 'text' });
 });
 $('sendCancel').addEventListener('click', async () => {
   if (currentSend) {
@@ -64,13 +78,14 @@ $('sendCancel').addEventListener('click', async () => {
 
 let currentSend = null;
 
-async function startSend(file) {
+async function startSend(payload) {
+  const { blob: srcBlob, name, type, kind } = payload;
   try {
     // 1. セッション作成
     const sRes = await fetch('/api/sessions', { method: 'POST' });
     const s = await sRes.json();
     currentSend = s;
-    if (file.size > s.maxBytes) {
+    if (srcBlob.size > s.maxBytes) {
       alert(`ファイルが大きすぎます(上限 ${fmtSize(s.maxBytes)})`);
       resetAll(); show('home'); return;
     }
@@ -79,7 +94,7 @@ async function startSend(file) {
     const { raw, key } = await generateContentKey();
     const pinKey = await derivePinKey(s.pin, s.sessionId);
     const wrappedKey = await wrapContentKey(raw, pinKey);
-    const encMeta = await encryptMeta(key, { name: file.name, type: file.type || 'application/octet-stream' });
+    const encMeta = await encryptMeta(key, { name, type, kind });
     await fetch(`/api/sessions/${s.sessionId}/prepare`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-juju-token': s.senderToken },
@@ -109,8 +124,8 @@ async function startSend(file) {
     const bar = $('sendProgress');
     bar.classList.remove('hidden');
     $('sendStatus').textContent = '暗号化中…';
-    const blob = await encryptFile(key, file, (read) => {
-      bar.value = Math.round((read / file.size) * 50); // 前半50%=暗号化
+    const blob = await encryptFile(key, srcBlob, (read) => {
+      bar.value = Math.round((read / srcBlob.size) * 50); // 前半50%=暗号化
     });
     $('sendStatus').textContent = 'アップロード中…';
     await uploadBlob(`/api/sessions/${s.sessionId}/blob`, blob, s.senderToken, (loaded, total) => {
@@ -262,7 +277,8 @@ async function receive(sessionId, { rawKeyB64, pin }) {
 
     // 4. メタ情報を復号
     const meta = await decryptMeta(contentKey, encMeta);
-    $('recvFile').textContent = `${meta.name} — ${fmtSize(size)}`;
+    const isText = meta.kind === 'text';
+    $('recvFile').textContent = isText ? `テキスト — ${fmtSize(size)}` : `${meta.name} — ${fmtSize(size)}`;
 
     // 5. 進捗WS
     activeWs = openWs(sessionId, 'receiver', receiverToken, () => {});
@@ -275,10 +291,16 @@ async function receive(sessionId, { rawKeyB64, pin }) {
       bar.value = Math.round((done / Math.max(1, size)) * 100);
     });
 
-    // 7. 保存
-    downloadBlob(blob, meta.name);
+    // 7. テキストは画面表示、ファイルは保存
     bar.value = 100;
-    status.textContent = '✓ 授受完了(保存しました)';
+    if (isText) {
+      const text = await blob.text();
+      showReceivedText(text);
+      status.textContent = '✓ 授受完了(テキスト)';
+    } else {
+      downloadBlob(blob, meta.name);
+      status.textContent = '✓ 授受完了(保存しました)';
+    }
   } catch (err) {
     console.error(err);
     status.textContent = `エラー: ${err.message || err}`;
@@ -308,6 +330,31 @@ function downloadBlob(blob, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
+
+// 受信したテキストを画面に表示(コピー / URLなら開く)
+function showReceivedText(text) {
+  $('recvTextArea').value = text;
+  $('recvText').classList.remove('hidden');
+  const open = $('openLink');
+  const trimmed = text.trim();
+  if (/^https?:\/\/\S+$/i.test(trimmed)) {
+    open.href = trimmed;
+    open.classList.remove('hidden');
+  } else {
+    open.classList.add('hidden');
+  }
+}
+$('copyTextBtn').addEventListener('click', async () => {
+  const text = $('recvTextArea').value;
+  try {
+    await navigator.clipboard.writeText(text);
+    $('copyTextBtn').textContent = 'コピーしました';
+    setTimeout(() => { $('copyTextBtn').textContent = 'コピー'; }, 1500);
+  } catch {
+    // クリップボードAPI不可時は選択にフォールバック
+    $('recvTextArea').select();
+  }
+});
 
 // 起動
 maybeAutoReceive();

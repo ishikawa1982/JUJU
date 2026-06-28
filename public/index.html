@@ -48,6 +48,11 @@
           <span class="filedrop-hint">タップして選択(またはドロップ)</span>
         </label>
         <p id="fileInfo" class="muted"></p>
+
+        <div class="or">または</div>
+        <textarea id="textInput" class="text-input" rows="3"
+                  placeholder="テキスト / URL を貼り付け"></textarea>
+        <button id="sendTextBtn" class="primary" type="button">テキストを送る</button>
       </div>
 
       <div id="sendShare" class="panel hidden">
@@ -80,6 +85,15 @@
         <div id="recvStatus" class="status">接続中…</div>
         <progress id="recvBar" max="100" value="0"></progress>
         <p id="recvFile" class="muted small"></p>
+
+        <!-- テキスト受信時のみ表示 -->
+        <div id="recvText" class="hidden">
+          <textarea id="recvTextArea" class="text-input" rows="4" readonly></textarea>
+          <div class="text-actions">
+            <button id="copyTextBtn" class="primary outline" type="button">コピー</button>
+            <a id="openLink" class="primary outline hidden" target="_blank" rel="noopener">開く</a>
+          </div>
+        </div>
       </div>
     </section>
   </main>

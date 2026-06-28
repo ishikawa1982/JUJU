@@ -106,9 +106,21 @@ button.primary, button.ghost {
   width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600;
   cursor: pointer; border: 1px solid transparent; margin-top: 12px;
 }
+.tone-ju button.primary { background: var(--ju); color: #fff; }
+.tone-ju button.primary.outline { background: #fff; color: var(--ju); border-color: var(--ju); }
 .tone-uke button.primary { background: var(--uke); color: #fff; }
 .tone-uke button.primary.outline { background: #fff; color: var(--uke); border-color: var(--uke); }
 button.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+
+/* ---- テキスト送受信 ---- */
+.text-input {
+  width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 12px;
+  font-size: 15px; font-family: inherit; color: var(--ink); background: #fff; resize: vertical;
+}
+.tone-ju .text-input:focus { outline: 2px solid var(--ju); border-color: transparent; }
+.text-actions { display: flex; gap: 10px; margin-top: 12px; }
+.text-actions > * { flex: 1; margin-top: 0; text-align: center; text-decoration: none; }
+a.primary { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
 
 /* ---- ステータス / 進捗 ---- */
 .status { text-align: center; font-weight: 600; margin: 12px 0 6px; }
