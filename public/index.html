@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f1e8" />
+  <title>授受 — JUJU</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23f5f1e8'/%3E%3Ctext x='32' y='44' font-size='40' text-anchor='middle' fill='%23222'%3E授%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+  <!-- 外部CDNに依存しない(社内プロキシ対策): ライブラリはローカル同梱 -->
+  <script src="./vendor/qrcode.min.js" defer></script>
+  <script src="./vendor/html5-qrcode.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <button id="homeBtn" class="brand" type="button" aria-label="ホームへ">
+      <span class="ji ju">授</span><span class="arrow">⇄</span><span class="ji uke">受</span>
+      <span class="romaji">JUJU</span>
+    </button>
+    <p class="tagline">ファイルを送る、受け取る。登録不要・数分で自動消去。</p>
+  </header>
+
+  <main>
+    <!-- ホーム: 授 / 受 の二択 -->
+    <section id="home" class="view active">
+      <div class="choose">
+        <button class="bigcard ju" data-go="send" type="button">
+          <span class="bigji">授</span>
+          <span class="biglabel">おくる</span>
+          <span class="bigsub">このデバイスのファイルを渡す</span>
+        </button>
+        <button class="bigcard uke" data-go="receive" type="button">
+          <span class="bigji">受</span>
+          <span class="biglabel">うける</span>
+          <span class="bigsub">PIN / QR で受け取る</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 授(送る) -->
+    <section id="send" class="view tone-ju">
+      <h2><span class="ji">授</span> おくる</h2>
+
+      <div id="sendPick" class="panel">
+        <label class="filedrop">
+          <input type="file" id="fileInput" />
+          <span class="filedrop-label">ファイルを選択</span>
+          <span class="filedrop-hint">タップして選択(またはドロップ)</span>
+        </label>
+        <p id="fileInfo" class="muted"></p>
+
+        <div class="or">または</div>
+        <textarea id="textInput" class="text-input" rows="3"
+                  placeholder="テキスト / URL を貼り付け"></textarea>
+        <button id="sendTextBtn" class="primary" type="button">テキストを送る</button>
+      </div>
+
+      <div id="sendShare" class="panel hidden">
+        <p class="pin-label">受け取り用 PIN</p>
+        <div id="pinShow" class="pin-show">— — — — — —</div>
+        <div class="qr-wrap"><canvas id="qrCanvas"></canvas></div>
+        <p class="muted small">スマホで QR を読むか、上の6桁を入力してください。</p>
+        <p class="muted small">※相手が受け取るまで、この画面を開いたままにしてください。</p>
+        <div id="sendStatus" class="status">準備中…</div>
+        <progress id="sendProgress" max="100" value="0" class="hidden"></progress>
+        <button id="sendCancel" class="ghost" type="button">キャンセル</button>
+      </div>
+    </section>
+
+    <!-- 受(受け取る) -->
+    <section id="receive" class="view tone-uke">
+      <h2><span class="ji">受</span> うける</h2>
+
+      <div id="recvEntry" class="panel">
+        <label class="pin-input-label" for="pinInput">PIN を入力</label>
+        <input id="pinInput" class="pin-input" inputmode="numeric" pattern="\d*"
+               maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+        <button id="recvByPin" class="primary" type="button">受け取る</button>
+        <div class="or">または</div>
+        <button id="scanBtn" class="primary outline" type="button">QR をスキャン</button>
+        <div id="qrReader" class="qr-reader hidden"></div>
+      </div>
+
+      <div id="recvProgress" class="panel hidden">
+        <div id="recvStatus" class="status">接続中…</div>
+        <progress id="recvBar" max="100" value="0"></progress>
+        <p id="recvFile" class="muted small"></p>
+
+        <!-- テキスト受信時のみ表示 -->
+        <div id="recvText" class="hidden">
+          <textarea id="recvTextArea" class="text-input" rows="4" readonly></textarea>
+          <div class="text-actions">
+            <button id="copyTextBtn" class="primary outline" type="button">コピー</button>
+            <a id="openLink" class="primary outline hidden" target="_blank" rel="noopener">開く</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>授受 / JUJU</span>
+    <span class="dot">·</span>
+    <span>ファイルはサーバーに保存されません(暗号化して中継・数分で削除)</span>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
